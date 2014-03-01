@@ -1,2 +1,6 @@
+*.agdai
 *.ibc
-/khartes
+*.java
+*.js
+pom.xml
+target
