@@ -2,23 +2,23 @@
 
 default: all
 
-all: aws/target/aws.jar
+all: khartes/target/khartes.jar
 
-aws/pom.xml:
-	@idris --mvn --codegen Java -o aws Main.idr
+khartes/pom.xml:
+	@idris --mvn --codegen Java -o khartes Main.idr
 
-aws/target/aws.jar: aws/pom.xml
-	@cd aws && mvn -DmainClass=aws compile package shade:shade
+khartes/target/khartes.jar: khartes/pom.xml
+	@cd khartes && mvn -DmainClass=khartes compile package shade:shade
 
 test:
 	@true
 
 run:
-	@java -jar aws/target/aws.jar
+	@java -jar khartes/target/khartes.jar
 
 clean:
 	@find . -name '*.ibc' -delete
-	@rm -rf aws
+	@rm -rf khartes
 
 # Local Variables:
 # indent-tabs-mode: t
