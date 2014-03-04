@@ -69,13 +69,6 @@ instance SimpleStorageServiceAPI JavaScript where
       ) p
 
 main : IO ()
-main = do
-  amz <- aws JS
-  -- ec2
-  amzEc2 <- ec2 amz
-  describeImages amzEc2
-  describeInstances amzEc2
-  -- simpledb
-  simpledb amz >>= listDomains
-  -- s3
-  s3 amz >>= listBuckets
+main = do amz <- aws JS
+          ec2 amz >>= describeInstances
+          s3 amz >>= listBuckets

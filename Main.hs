@@ -43,6 +43,6 @@ instance SimpleStorageServiceAPI JS where
 
 main :: IO ()
 main = do
-  client <- aws JS
-  ec2 client >>= describeInstances
-  s3 client >>= listBuckets
+  amz <- aws JS
+  ec2 amz >>= describeInstances
+  s3 amz >>= listBuckets
