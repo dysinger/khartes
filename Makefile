@@ -16,11 +16,11 @@ node_modules/bucker:
 .cabal-sandbox/bin/idris: | .cabal-sandbox
 	@cabal install idris
 
-khartes-idris: | .cabal-sandbox/bin/idris node_modules/aws-sdk node_modules/bucker
-	@.cabal-sandbox/bin/idris --codegen node -o khartes-idris Main.idr
-
 .cabal-sandbox/bin/hastec: | .cabal-sandbox
 	@cabal install haste-complier
+
+khartes-idris: | .cabal-sandbox/bin/idris node_modules/aws-sdk node_modules/bucker
+	@.cabal-sandbox/bin/idris --codegen node -o khartes-idris Main.idr
 
 khartes-haste: | .cabal-sandbox/bin/hastec node_modules/aws-sdk node_modules/bucker
 	@hastec --start=asap --out=khartes-haste Main.hs
