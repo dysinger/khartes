@@ -30,39 +30,39 @@ class SimpleStorageServiceAPI a where
 
 data JavaScript : Type where
   JS : JavaScript
-  JSPtr : Ptr -> JavaScript
+  JSRef : Ptr -> JavaScript
 
 instance AmazonWebServicesAPI JavaScript where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
            return . AWS . JSPtr
 
 instance ElasticComputeCloudAPI JavaScript where
-  ec2 (AWS (JSPtr p)) = mkForeign (FFun "new %0.EC2();" [FPtr] FPtr) p >>=
-                        return . EC2 . JSPtr
-  describeImages (EC2 (JSPtr p)) =
+  ec2 (AWS (JSRef p)) = mkForeign (FFun "new %0.EC2();" [FPtr] FPtr) p >>=
+                        return . EC2 . JSRef
+  describeImages (EC2 (JSRef p)) =
     mkForeign (
       FFun ("%0.describeImages().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
       [FPtr] FUnit
       ) p
-  describeInstances (EC2 (JSPtr p)) =
+  describeInstances (EC2 (JSRef p)) =
     mkForeign (
       FFun ("%0.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
       [FPtr] FUnit
       ) p
 
 instance SimpleDataBaseAPI JavaScript where
-  simpledb (AWS (JSPtr p)) = mkForeign (FFun "new %0.SimpleDB()" [FPtr] FPtr) p >>=
-                             return . SimpleDB . JSPtr
-  listDomains (SimpleDB (JSPtr p)) =
+  simpledb (AWS (JSRef p)) = mkForeign (FFun "new %0.SimpleDB()" [FPtr] FPtr) p >>=
+                             return . SimpleDB . JSRef
+  listDomains (SimpleDB (JSRef p)) =
     mkForeign (
       FFun ("%0.listDomains().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
       [FPtr] FUnit
       ) p
 
 instance SimpleStorageServiceAPI JavaScript where
-  s3 (AWS (JSPtr p)) = mkForeign (FFun "new %0.S3()" [FPtr] FPtr) p >>=
-                       return . S3 . JSPtr
-  listBuckets (S3 (JSPtr p)) =
+  s3 (AWS (JSRef p)) = mkForeign (FFun "new %0.S3()" [FPtr] FPtr) p >>=
+                       return . S3 . JSRef
+  listBuckets (S3 (JSRef p)) =
     mkForeign (
       FFun ("%0.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
       [FPtr] FUnit
