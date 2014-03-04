@@ -1,37 +1,81 @@
 module Main
 
-%language TypeProviders
+data AmazonWebServices : a -> Type where
+  AWS : a -> AmazonWebServices a
 
-%lib Java "org.apache.jclouds:jclouds-allblobstore:1.6.3"
-%lib Java "org.apache.jclouds:jclouds-blobstore:1.6.3"
+data ElasticComputeCloud : a -> Type where
+  EC2 : a -> ElasticComputeCloud a
 
-%include Java "org.jclouds.*"
-%include Java "org.jclouds.apis.*"
-%include Java "org.jclouds.blobstore.*"
-%include Java "org.jclouds.blobstore.domain.*"
-%include Java "org.jclouds.providers.*"
-%include Java "org.jclouds.rest.*"
-%include Java "org.jclouds.s3.*"
+data SimpleDataBase : a -> Type where
+  SimpleDB : a -> SimpleDataBase a
 
-contextBuilder : String -> IO Ptr
-contextBuilder p = mkForeign (FFun "ContextBuilder.newBuilder" [FString] FPtr) p
+data SimpleStorageService : a -> Type where
+  S3 : a -> SimpleStorageService a
 
-builderCredentials : String -> String -> Ptr -> IO Ptr
-builderCredentials i s b = mkForeign (FFun "credentials" [FPtr, FString, FString] FPtr) b i s
+class AmazonWebServicesAPI a where
+  aws : a -> IO (AmazonWebServices a)
 
-blobStoreViewContext : Ptr -> IO Ptr
-blobStoreViewContext b = mkForeign (FFun "buildView(BlobStoreContext.class)" [FPtr] FPtr) b
+class ElasticComputeCloudAPI a where
+  ec2 : AmazonWebServices a -> IO (ElasticComputeCloud a)
+  describeImages : ElasticComputeCloud a -> IO ()
+  describeInstances : ElasticComputeCloud a -> IO ()
 
-blobStore : Ptr -> IO Ptr
-blobStore c = mkForeign (FFun "getBlobStore" [FPtr] FPtr) c
+class SimpleDataBaseAPI a where
+  simpledb : AmazonWebServices a -> IO (SimpleDataBase a)
+  listDomains : SimpleDataBase a -> IO ()
 
-closeContext : Ptr -> IO ()
-closeContext c = mkForeign (FFun "close" [FPtr] FUnit) c
+class SimpleStorageServiceAPI a where
+  s3 : AmazonWebServices a -> IO (SimpleStorageService a)
+  listBuckets : SimpleStorageService a -> IO ()
+
+data JavaScript : Type where
+  JS : JavaScript
+  JSPtr : Ptr -> JavaScript
+
+instance AmazonWebServicesAPI JavaScript where
+  aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
+           return . AWS . JSPtr
+
+instance ElasticComputeCloudAPI JavaScript where
+  ec2 (AWS (JSPtr p)) = mkForeign (FFun "new %0.EC2();" [FPtr] FPtr) p >>=
+                        return . EC2 . JSPtr
+  describeImages (EC2 (JSPtr p)) =
+    mkForeign (
+      FFun ("%0.describeImages().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
+      [FPtr] FUnit
+      ) p
+  describeInstances (EC2 (JSPtr p)) =
+    mkForeign (
+      FFun ("%0.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
+      [FPtr] FUnit
+      ) p
+
+instance SimpleDataBaseAPI JavaScript where
+  simpledb (AWS (JSPtr p)) = mkForeign (FFun "new %0.SimpleDB()" [FPtr] FPtr) p >>=
+                             return . SimpleDB . JSPtr
+  listDomains (SimpleDB (JSPtr p)) =
+    mkForeign (
+      FFun ("%0.listDomains().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
+      [FPtr] FUnit
+      ) p
+
+instance SimpleStorageServiceAPI JavaScript where
+  s3 (AWS (JSPtr p)) = mkForeign (FFun "new %0.S3()" [FPtr] FPtr) p >>=
+                       return . S3 . JSPtr
+  listBuckets (S3 (JSPtr p)) =
+    mkForeign (
+      FFun ("%0.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
+      [FPtr] FUnit
+      ) p
 
 main : IO ()
-main = do builder <- contextBuilder "aws-s3" >>= builderCredentials "KEY" "SECRET"
-          context <- blobStoreViewContext builder
-          store <- blobStore context
-       -- do some shtuff with the blob store here
-          closeContext context
-          print "hello"
+main = do
+  amz <- aws JS
+  -- ec2
+  amzEc2 <- ec2 amz
+  describeImages amzEc2
+  describeInstances amzEc2
+  -- simpledb
+  simpledb amz >>= listDomains
+  -- s3
+  s3 amz >>= listBuckets

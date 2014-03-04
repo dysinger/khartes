@@ -1,24 +1,26 @@
-.PHONY: default all clean test
+.PHONY: default all run clean
 
 default: all
 
-all: khartes/target/khartes.jar
+all: khartes
 
-khartes/pom.xml:
-	@idris --mvn --codegen Java -o khartes Main.idr
+node_modules/aws-sdk:
+	@npm install aws-sdk
 
-khartes/target/khartes.jar: khartes/pom.xml
-	@cd khartes && mvn -DmainClass=khartes compile package shade:shade
+node_modules/bucker:
+	@npm install bucker
 
-test:
-	@true
+khartes: | node_modules/aws-sdk node_modules/bucker
+	@hastec --start=asap --out=khartes Main.hs
 
-run:
-	@java -jar khartes/target/khartes.jar
+run: | khartes
+	@node ./khartes
 
 clean:
-	@find . -name '*.ibc' -delete
-	@rm -rf khartes
+	@rm -rf *.hi *.ibc *.js *.o khartes
+
+distclean: | clean
+	@rm -rf node_modules
 
 # Local Variables:
 # indent-tabs-mode: t

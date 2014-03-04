@@ -1,6 +1,13 @@
 *.agdai
+*.hi
 *.ibc
 *.java
 *.js
+*.jsmod
+*.o
+*cabal*sandbox*
+dist
+khartes
+node_modules
 pom.xml
 target
