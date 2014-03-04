@@ -1,5 +1,7 @@
 module Main
 
+-- Data
+
 data AmazonWebServices : a -> Type where
   AWS : a -> AmazonWebServices a
 
@@ -11,6 +13,12 @@ data SimpleDataBase : a -> Type where
 
 data SimpleStorageService : a -> Type where
   S3 : a -> SimpleStorageService a
+
+data JavaScript : Type where
+  JS : JavaScript
+  JSRef : Ptr -> JavaScript
+
+-- Classes
 
 class AmazonWebServicesAPI a where
   aws : a -> IO (AmazonWebServices a)
@@ -28,16 +36,14 @@ class SimpleStorageServiceAPI a where
   s3 : AmazonWebServices a -> IO (SimpleStorageService a)
   listBuckets : SimpleStorageService a -> IO ()
 
-data JavaScript : Type where
-  JS : JavaScript
-  JSRef : Ptr -> JavaScript
+-- Instances
 
 instance AmazonWebServicesAPI JavaScript where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
            return . AWS . JSRef
 
 instance ElasticComputeCloudAPI JavaScript where
-  ec2 (AWS (JSRef p)) = mkForeign (FFun "new %0.EC2();" [FPtr] FPtr) p >>=
+  ec2 (AWS (JSRef p)) = mkForeign (FFun "new %0.EC2()" [FPtr] FPtr) p >>=
                         return . EC2 . JSRef
   describeImages (EC2 (JSRef p)) =
     mkForeign (
@@ -67,6 +73,8 @@ instance SimpleStorageServiceAPI JavaScript where
       FFun ("%0.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
       [FPtr] FUnit
       ) p
+
+-- Main
 
 main : IO ()
 main = do amz <- aws JS
