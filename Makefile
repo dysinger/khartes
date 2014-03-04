@@ -23,7 +23,7 @@ khartes-idris: | .cabal-sandbox/bin/idris node_modules/aws-sdk node_modules/buck
 	@.cabal-sandbox/bin/idris --codegen node -o khartes-idris Main.idr
 
 khartes-haste: | .cabal-sandbox/bin/hastec node_modules/aws-sdk node_modules/bucker
-	@hastec --start=asap --out=khartes-haste Main.hs
+	@.cabal-sandbox/bin/hastec --start=asap --out=khartes-haste Main.hs
 
 clean:
 	@rm -rf *.hi *.ibc *.js *.o khartes*
