@@ -18,23 +18,23 @@ class AmazonWebServicesAPI a => SimpleStorageServiceAPI a where
   s3 :: MonadIO m => AmazonWebServices a -> m (SimpleStorageService a)
   listBuckets :: MonadIO m => SimpleStorageService a -> m ()
 
-data JS = JS
+data JavaScript = JS
 
-instance AmazonWebServicesAPI JS where
-  data AmazonWebServices JS = AmazonWebServicesJS Unpacked
+instance AmazonWebServicesAPI JavaScript where
+  data AmazonWebServices JavaScript = AmazonWebServicesJS Unpacked
   aws JS = liftIO $ ffi "(function(){return require('aws-sdk');});" >>=
            return . AmazonWebServicesJS . fromOpaque
 
-instance ElasticComputeCloudAPI JS where
-  data ElasticComputeCloud JS = ElasticComputeCloudJS Unpacked
+instance ElasticComputeCloudAPI JavaScript where
+  data ElasticComputeCloud JavaScript = ElasticComputeCloudJS Unpacked
   ec2 (AmazonWebServicesJS ref) =
     liftIO $ ffi "(function(x){return new x.EC2();});" (toOpaque ref) >>=
     return . ElasticComputeCloudJS . fromOpaque
   describeInstances (ElasticComputeCloudJS ref) =
     liftIO $ ffi "(function(x){x.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque ref
 
-instance SimpleStorageServiceAPI JS where
-  data SimpleStorageService JS = SimpleStorageServiceJS Unpacked
+instance SimpleStorageServiceAPI JavaScript where
+  data SimpleStorageService JavaScript = SimpleStorageServiceJS Unpacked
   s3 (AmazonWebServicesJS ref) =
     liftIO $ ffi "(function(x){return new x.S3();});" (toOpaque ref) >>=
     return . SimpleStorageServiceJS . fromOpaque

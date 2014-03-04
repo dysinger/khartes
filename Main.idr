@@ -34,7 +34,7 @@ data JavaScript : Type where
 
 instance AmazonWebServicesAPI JavaScript where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
-           return . AWS . JSPtr
+           return . AWS . JSRef
 
 instance ElasticComputeCloudAPI JavaScript where
   ec2 (AWS (JSRef p)) = mkForeign (FFun "new %0.EC2();" [FPtr] FPtr) p >>=
