@@ -2,7 +2,7 @@
 
 default: all
 
-all: khartes
+all: khartes-idris khartes-haste
 
 node_modules/aws-sdk:
 	@npm install aws-sdk
@@ -10,14 +10,23 @@ node_modules/aws-sdk:
 node_modules/bucker:
 	@npm install bucker
 
-khartes: | node_modules/aws-sdk node_modules/bucker
-	@hastec --start=asap --out=khartes Main.hs
+.cabal-sandbox:
+	@cabal sandbox init
 
-run: | khartes
-	@node ./khartes
+.cabal-sandbox/bin/idris: | .cabal-sandbox
+	@cabal install idris
+
+khartes-idris: | .cabal-sandbox/bin/idris node_modules/aws-sdk node_modules/bucker
+	@.cabal-sandbox/bin/idris --codegen node -o khartes-idris Main.idr
+
+.cabal-sandbox/bin/hastec: | .cabal-sandbox
+	@cabal install hastec-complier
+
+khartes-haste: | .cabal-sandbox/bin/hastec node_modules/aws-sdk node_modules/bucker
+	@hastec --start=asap --out=khartes-haste Main.hs
 
 clean:
-	@rm -rf *.hi *.ibc *.js *.o khartes
+	@rm -rf *.hi *.ibc *.js *.o khartes*
 
 distclean: | clean
 	@rm -rf node_modules
