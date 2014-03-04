@@ -20,7 +20,7 @@ khartes-idris: | .cabal-sandbox/bin/idris node_modules/aws-sdk node_modules/buck
 	@.cabal-sandbox/bin/idris --codegen node -o khartes-idris Main.idr
 
 .cabal-sandbox/bin/hastec: | .cabal-sandbox
-	@cabal install hastec-complier
+	@cabal install haste-complier
 
 khartes-haste: | .cabal-sandbox/bin/hastec node_modules/aws-sdk node_modules/bucker
 	@hastec --start=asap --out=khartes-haste Main.hs
