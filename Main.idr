@@ -75,7 +75,7 @@ on e f j =
              [ FPtr
              , FString
              , FAny Ptr ~> FAny (IO ())
-             ] FPtr) j (show e) f >>= return
+             ] FPtr) j (show e) f
 
 send : Ptr -> IO ()
 send j = mkForeign (FFun ("%0.send()") [FPtr] FUnit) j
@@ -84,7 +84,7 @@ log : Ptr -> IO ()
 log j = mkForeign (FFun ("console.log(%0)") [FPtr] FUnit) j
 
 logHandler : Ptr -> IO (Ptr)
-logHandler r = on Success log r >>= on Error log >>= return
+logHandler r = on Success log r >>= on Error log
 
 instance AmazonWebServicesAPI JavaScript Ptr where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
@@ -94,21 +94,21 @@ instance ElasticComputeCloudAPI JavaScript Ptr where
   ec2 (AWS JS j) =
     mkForeign (FFun "new %0.EC2()" [FPtr] FPtr) j >>= return . EC2 JS
   describeImages (EC2 JS j) =
-    mkForeign (FFun "%0.describeImages()" [FPtr] FPtr) j >>= return
+    mkForeign (FFun "%0.describeImages()" [FPtr] FPtr) j
   describeInstances (EC2 JS j) =
-    mkForeign (FFun "%0.describeInstances()" [FPtr] FPtr) j >>= return
+    mkForeign (FFun "%0.describeInstances()" [FPtr] FPtr) j
 
 instance SimpleDataBaseAPI JavaScript Ptr where
   simpledb (AWS JS j) =
     mkForeign (FFun "new %0.SimpleDB()" [FPtr] FPtr) j >>= return . SimpleDB JS
   listDomains (SimpleDB JS j) =
-    mkForeign (FFun "%0.listDomains()" [FPtr] FPtr) j >>= return
+    mkForeign (FFun "%0.listDomains()" [FPtr] FPtr) j
 
 instance SimpleStorageServiceAPI JavaScript Ptr where
   s3 (AWS JS j) =
     mkForeign (FFun "new %0.S3()" [FPtr] FPtr) j >>= return . S3 JS
   listBuckets (S3 JS j) =
-    mkForeign (FFun "%0.listBuckets()" [FPtr] FPtr) j >>= return
+    mkForeign (FFun "%0.listBuckets()" [FPtr] FPtr) j
 
 -- Main
 
