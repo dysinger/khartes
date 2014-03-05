@@ -20,81 +20,98 @@ permissions and limitations under the License.
 
 -- Data
 
-data AmazonWebServices : a -> Type where
-  AWS : a -> AmazonWebServices a
+data AmazonWebServices : a -> b -> Type where
+  AWS : a -> b -> AmazonWebServices a b
 
-data ElasticComputeCloud : a -> Type where
-  EC2 : a -> ElasticComputeCloud a
+data ElasticComputeCloud : a -> b -> Type where
+  EC2 : a -> b -> ElasticComputeCloud a b
 
-data SimpleDataBase : a -> Type where
-  SimpleDB : a -> SimpleDataBase a
+data SimpleDataBase : a -> b -> Type where
+  SimpleDB : a -> b -> SimpleDataBase a b
 
-data SimpleStorageService : a -> Type where
-  S3 : a -> SimpleStorageService a
-
-data JavaScript : Type where
-  JS : JavaScript
-  JSRef : Ptr -> JavaScript
+data SimpleStorageService : a -> b -> Type where
+  S3 : a -> b -> SimpleStorageService a b
 
 -- Classes
 
-class AmazonWebServicesAPI a where
-  aws : a -> IO (AmazonWebServices a)
+class AmazonWebServicesAPI a b where
+  aws : a -> IO (AmazonWebServices a b)
 
-class ElasticComputeCloudAPI a where
-  ec2 : AmazonWebServices a -> IO (ElasticComputeCloud a)
-  describeImages : ElasticComputeCloud a -> IO ()
-  describeInstances : ElasticComputeCloud a -> IO ()
+class ElasticComputeCloudAPI a b where
+  ec2 : AmazonWebServices a b -> IO (ElasticComputeCloud a b)
+  describeImages : ElasticComputeCloud a b -> IO b
+  describeInstances : ElasticComputeCloud a b -> IO b
 
-class SimpleDataBaseAPI a where
-  simpledb : AmazonWebServices a -> IO (SimpleDataBase a)
-  listDomains : SimpleDataBase a -> IO ()
+class SimpleDataBaseAPI a b where
+  simpledb : AmazonWebServices a b -> IO (SimpleDataBase a b)
+  listDomains : SimpleDataBase a b -> IO b
 
-class SimpleStorageServiceAPI a where
-  s3 : AmazonWebServices a -> IO (SimpleStorageService a)
-  listBuckets : SimpleStorageService a -> IO ()
+class SimpleStorageServiceAPI a b where
+  s3 : AmazonWebServices a b -> IO (SimpleStorageService a b)
+  listBuckets : SimpleStorageService a b -> IO b
 
--- Instances
+-- JavaScript
 
-instance AmazonWebServicesAPI JavaScript where
+data JavaScript : Type where
+  JS : JavaScript
+
+data Event : Type where
+  Complete : Event
+  Error : Event
+  Success : Event
+
+instance Show Event where
+  show Complete = "complete"
+  show Error = "error"
+  show Success = "success"
+
+on : Event -> (Ptr -> IO ()) -> Ptr -> IO (Ptr)
+on e f j =
+  mkForeign (FFun "%0.on(%1,%2)"
+             [ FPtr
+             , FString
+             , FFunction (FAny Ptr) (FAny (IO ()))
+             ] FPtr) j (show e) f >>= return
+
+send : Ptr -> IO ()
+send j = mkForeign (FFun ("%0.send()") [FPtr] FUnit) j
+
+log : Ptr -> IO ()
+log j = mkForeign (FFun ("console.log(%0)") [FPtr] FUnit) j
+
+logHandler : Ptr -> IO (Ptr)
+logHandler r = on Success log r >>= on Error log >>= return
+
+instance AmazonWebServicesAPI JavaScript Ptr where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
-           return . AWS . JSRef
+           return . AWS JS
 
-instance ElasticComputeCloudAPI JavaScript where
-  ec2 (AWS (JSRef p)) = mkForeign (FFun "new %0.EC2()" [FPtr] FPtr) p >>=
-                        return . EC2 . JSRef
-  describeImages (EC2 (JSRef p)) =
-    mkForeign (
-      FFun ("%0.describeImages().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
-      [FPtr] FUnit
-      ) p
-  describeInstances (EC2 (JSRef p)) =
-    mkForeign (
-      FFun ("%0.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
-      [FPtr] FUnit
-      ) p
+instance ElasticComputeCloudAPI JavaScript Ptr where
+  ec2 (AWS JS j) =
+    mkForeign (FFun "new %0.EC2()" [FPtr] FPtr) j >>= return . EC2 JS
+  describeImages (EC2 JS j) =
+    mkForeign (FFun "%0.describeImages()" [FPtr] FPtr) j >>= return
+  describeInstances (EC2 JS j) =
+    mkForeign (FFun "%0.describeInstances()" [FPtr] FPtr) j >>= return
 
-instance SimpleDataBaseAPI JavaScript where
-  simpledb (AWS (JSRef p)) = mkForeign (FFun "new %0.SimpleDB()" [FPtr] FPtr) p >>=
-                             return . SimpleDB . JSRef
-  listDomains (SimpleDB (JSRef p)) =
-    mkForeign (
-      FFun ("%0.listDomains().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
-      [FPtr] FUnit
-      ) p
+instance SimpleDataBaseAPI JavaScript Ptr where
+  simpledb (AWS JS j) =
+    mkForeign (FFun "new %0.SimpleDB()" [FPtr] FPtr) j >>= return . SimpleDB JS
+  listDomains (SimpleDB JS j) =
+    mkForeign (FFun "%0.listDomains()" [FPtr] FPtr) j >>= return
 
-instance SimpleStorageServiceAPI JavaScript where
-  s3 (AWS (JSRef p)) = mkForeign (FFun "new %0.S3()" [FPtr] FPtr) p >>=
-                       return . S3 . JSRef
-  listBuckets (S3 (JSRef p)) =
-    mkForeign (
-      FFun ("%0.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send()")
-      [FPtr] FUnit
-      ) p
+instance SimpleStorageServiceAPI JavaScript Ptr where
+  s3 (AWS JS j) =
+    mkForeign (FFun "new %0.S3()" [FPtr] FPtr) j >>= return . S3 JS
+  listBuckets (S3 JS j) =
+    mkForeign (FFun "%0.listBuckets()" [FPtr] FPtr) j >>= return
 
 -- Main
 
 main : IO ()
-main = do amz <- aws JS
-          ec2 amz >>= describeInstances
-          s3 amz >>= listBuckets
+main = do
+  amz <- aws JS
+  amzS3 <- s3 amz
+  listBuckets amzS3 >>= logHandler >>= send
+  amzEc2 <- ec2 amz
+  describeInstances amzEc2 >>= logHandler >>= send

@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-
 
@@ -24,56 +25,58 @@ import           Haste.Foreign
 
 -- Data
 
-data AmazonWebServices a where
-  AWS :: a -> AmazonWebServices a
+data AmazonWebServices a b where
+  AWS :: a -> b -> AmazonWebServices a b
 
-data ElasticComputeCloud a where
-  EC2 :: a -> ElasticComputeCloud a
+data ElasticComputeCloud a b where
+  EC2 :: a -> b -> ElasticComputeCloud a b
 
-data SimpleStorageService a where
-  S3 :: a -> SimpleStorageService a
-
-data JavaScript where
-  JS :: JavaScript
-  JSRef :: Unpacked -> JavaScript
+data SimpleStorageService a b where
+  S3 :: a -> b -> SimpleStorageService a b
 
 -- Classes
 
-class AmazonWebServicesAPI a where
-  aws :: MonadIO m => a -> m (AmazonWebServices a)
+class AmazonWebServicesAPI a b where
+  aws :: MonadIO m => a -> m (AmazonWebServices a b)
 
-class AmazonWebServicesAPI a => ElasticComputeCloudAPI a where
-  ec2 :: MonadIO m => AmazonWebServices a -> m (ElasticComputeCloud a)
-  describeInstances :: MonadIO m => ElasticComputeCloud a -> m ()
+class ElasticComputeCloudAPI a b where
+  ec2 :: MonadIO m => AmazonWebServices a b -> m (ElasticComputeCloud a b)
+  describeInstances :: MonadIO m => ElasticComputeCloud a b -> m ()
 
-class AmazonWebServicesAPI a => SimpleStorageServiceAPI a where
-  s3 :: MonadIO m => AmazonWebServices a -> m (SimpleStorageService a)
-  listBuckets :: MonadIO m => SimpleStorageService a -> m ()
+class SimpleStorageServiceAPI a b where
+  s3 :: MonadIO m => AmazonWebServices a b -> m (SimpleStorageService a b)
+  listBuckets :: MonadIO m => SimpleStorageService a b -> m ()
 
--- Instances
+-- JavaScript
 
-instance AmazonWebServicesAPI JavaScript where
+data JavaScript where
+  JS :: JavaScript
+
+instance AmazonWebServicesAPI JavaScript Unpacked where
   aws JS = liftIO $ ffi "(function(){return require('aws-sdk');});" >>=
-           return . AWS . JSRef . fromOpaque
+           return . AWS JS . fromOpaque
 
-instance ElasticComputeCloudAPI JavaScript where
-  ec2 (AWS (JSRef ref)) =
-    liftIO $ ffi "(function(x){return new x.EC2();});" (toOpaque ref) >>=
-    return . EC2 . JSRef . fromOpaque
-  describeInstances (EC2 (JSRef ref)) =
-    liftIO $ ffi "(function(x){x.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque ref
+instance ElasticComputeCloudAPI JavaScript Unpacked where
+  ec2 (AWS JS j) =
+    liftIO $ ffi "(function(x){return new x.EC2();});" (toOpaque j) >>=
+    return . EC2 JS . fromOpaque
+  describeInstances (EC2 JS j) =
+    liftIO $ ffi "(function(x){x.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque j
 
-instance SimpleStorageServiceAPI JavaScript where
-  s3 (AWS (JSRef ref)) =
-    liftIO $ ffi "(function(x){return new x.S3();});" (toOpaque ref) >>=
-    return . S3 . JSRef . fromOpaque
-  listBuckets (S3 (JSRef ref)) =
-    liftIO $ ffi "(function(x){x.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque ref
+instance SimpleStorageServiceAPI JavaScript Unpacked where
+  s3 (AWS JS j) =
+    liftIO $ ffi "(function(x){return new x.S3();});" (toOpaque j) >>=
+    return . S3 JS . fromOpaque
+  listBuckets (S3 JS j) =
+    liftIO $ ffi "(function(x){x.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque j
 
 -- Main
 
 main :: IO ()
 main = do
-  amz <- aws JS
-  ec2 amz >>= describeInstances
-  s3 amz >>= listBuckets
+  amz <- aws JS :: IO (AmazonWebServices JavaScript Unpacked)
+  amzEc2 <- ec2 amz :: IO (ElasticComputeCloud JavaScript Unpacked)
+  describeInstances amzEc2
+  amzS3 <- s3 amz :: IO (SimpleStorageService JavaScript Unpacked)
+  listBuckets amzS3
+  return ()
