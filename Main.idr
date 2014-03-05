@@ -65,12 +65,16 @@ instance Show Event where
   show Error = "error"
   show Success = "success"
 
+infixr 7 ~>
+(~>) : FTy -> FTy -> FTy
+(~>) a b = FFunction a b
+
 on : Event -> (Ptr -> IO ()) -> Ptr -> IO (Ptr)
 on e f j =
   mkForeign (FFun "%0.on(%1,%2)"
              [ FPtr
              , FString
-             , FFunction (FAny Ptr) (FAny (IO ()))
+             , FAny Ptr ~> FAny (IO ())
              ] FPtr) j (show e) f >>= return
 
 send : Ptr -> IO ()
