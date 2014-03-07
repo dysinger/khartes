@@ -71,9 +71,9 @@ forEach j0 j1 =
 
 -- AWS CONFIG
 
-region : AmazonWebServices JavaScript Ptr -> String -> IO ()
-region (AWS JS j0) j1 =
-  mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j0 j1
+region : String -> AmazonWebServices JavaScript Ptr -> IO ()
+region j0 (AWS JS j1) =
+  mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j1 j0
 
 -- AWS REQUEST
 
@@ -188,12 +188,12 @@ instance SimpleStorageServiceAPI JavaScript Ptr where
   listBuckets (S3 JS j) =
     mkForeign (FFun "%0.listBuckets()" [FPtr] FPtr) j
 
--- MAIN
+-- MAIN (DEMO)
 
 main : IO ()
 main = do
   amz <- aws JS
-  region amz "us-east-1"
+  region "us-east-1" amz
   ec2 amz >>=
     describeInstances >>=
     on Success logEachInstance >>=
