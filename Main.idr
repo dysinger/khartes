@@ -18,7 +18,7 @@ permissions and limitations under the License.
 
 -}
 
--- Data
+-- DATA
 
 data AmazonWebServices : a -> b -> Type where
   AWS : a -> b -> AmazonWebServices a b
@@ -32,7 +32,7 @@ data SimpleDataBase : a -> b -> Type where
 data SimpleStorageService : a -> b -> Type where
   S3 : a -> b -> SimpleStorageService a b
 
--- Classes
+-- CLASSES
 
 class AmazonWebServicesAPI a b where
   aws : a -> IO (AmazonWebServices a b)
@@ -50,7 +50,7 @@ class SimpleStorageServiceAPI a b where
   s3 : AmazonWebServices a b -> IO (SimpleStorageService a b)
   listBuckets : SimpleStorageService a b -> IO b
 
--- JavaScript
+-- JAVASCRIPT
 
 data JavaScript : Type where
   JS : JavaScript
@@ -65,9 +65,29 @@ instance Show Event where
   show Error = "error"
   show Success = "success"
 
+-- GENERAL JS
+
 infixr 7 ~>
 (~>) : FTy -> FTy -> FTy
 (~>) a b = FFunction a b
+
+jsMap : (Ptr -> IO (Ptr)) -> Ptr -> IO (Ptr)
+jsMap j0 j1 =
+  mkForeign (FFun ("%0.map(%1)")
+             [FPtr, FAny Ptr ~> FAny (IO (Ptr))] FPtr) j1 j0
+
+forEach : (Ptr -> IO ()) -> Ptr -> IO ()
+forEach j0 j1 =
+  mkForeign (FFun ("%0.forEach(%1)")
+             [FPtr, FAny Ptr ~> FAny (IO ())] FUnit) j1 j0
+
+-- AWS CONFIG
+
+region : AmazonWebServices JavaScript Ptr -> String -> IO ()
+region (AWS JS j0) j1 =
+  mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j0 j1
+
+-- AWS REQUEST
 
 on : Event -> (Ptr -> IO ()) -> Ptr -> IO (Ptr)
 on e f j =
@@ -80,11 +100,68 @@ on e f j =
 send : Ptr -> IO ()
 send j = mkForeign (FFun ("%0.send()") [FPtr] FUnit) j
 
+-- AWS RESPONSE
+
+rsErr : Ptr -> IO (Ptr)
+rsErr j = mkForeign (FFun ("%0.error") [FPtr] FPtr) j
+
+rsData : Ptr -> IO (Ptr)
+rsData j = mkForeign (FFun ("%0.data") [FPtr] FPtr) j
+
+-- ATTRIBUTES
+
+name : Ptr -> IO (Ptr)
+name j = mkForeign (FFun ("%0.Name") [FPtr] FPtr) j
+
+buckets : Ptr -> IO (Ptr)
+buckets j = mkForeign (FFun ("%0.Buckets") [FPtr] FPtr) j
+
+bucketNames : Ptr -> IO (Ptr)
+bucketNames j = rsData j >>= buckets >>= jsMap name
+
+reservationId : Ptr -> IO (Ptr)
+reservationId j = mkForeign (FFun ("%0.ReservationId") [FPtr] FPtr) j
+
+reservations : Ptr -> IO (Ptr)
+reservations j = mkForeign (FFun ("%0.Reservations") [FPtr] FPtr) j
+
+reservationIds : Ptr -> IO (Ptr)
+reservationIds j = rsData j >>= reservations >>= jsMap reservationId
+
+instances : Ptr -> IO (Ptr)
+instances j = mkForeign (FFun ("%0.Instances") [FPtr] FPtr) j
+
+instanceId : Ptr -> IO (Ptr)
+instanceId j = mkForeign (FFun ("%0.InstanceId") [FPtr] FPtr) j
+
+instanceIds : Ptr -> IO (Ptr)
+instanceIds j =
+  rsData j >>= reservations >>= jsMap instances >>= jsMap (jsMap instanceId)
+
+-- LOGGING
+
 log : Ptr -> IO ()
 log j = mkForeign (FFun ("console.log(%0)") [FPtr] FUnit) j
 
-logHandler : Ptr -> IO (Ptr)
-logHandler r = on Success log r >>= on Error log
+logErr : Ptr -> IO ()
+logErr j = rsErr j >>= log
+
+logData : Ptr -> IO ()
+logData j = rsData j >>= log
+
+logEachBucketName : Ptr -> IO ()
+logEachBucketName j = do putStrLn "BUCKET NAMES:"
+                         bucketNames j >>= forEach log
+
+logEachReservationId : Ptr -> IO ()
+logEachReservationId j = do putStrLn "RESERVATIONS:"
+                            reservationIds j >>= forEach log
+
+logEachInstance : Ptr -> IO ()
+logEachInstance j = do putStrLn "INSTANCES:"
+                       instanceIds j >>= forEach log
+
+-- INSTANCES
 
 instance AmazonWebServicesAPI JavaScript Ptr where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
@@ -110,12 +187,19 @@ instance SimpleStorageServiceAPI JavaScript Ptr where
   listBuckets (S3 JS j) =
     mkForeign (FFun "%0.listBuckets()" [FPtr] FPtr) j
 
--- Main
+-- MAIN
 
 main : IO ()
 main = do
   amz <- aws JS
-  amzS3 <- s3 amz
-  listBuckets amzS3 >>= logHandler >>= send
-  amzEc2 <- ec2 amz
-  describeInstances amzEc2 >>= logHandler >>= send
+  region amz "us-east-1"
+  ec2 amz >>=
+    describeInstances >>=
+    on Success logEachInstance >>=
+    on Error logErr >>=
+    send
+  s3 amz >>=
+    listBuckets >>=
+    on Success logEachBucketName >>=
+    on Error logErr >>=
+    send
