@@ -55,18 +55,6 @@ class SimpleStorageServiceAPI a b where
 data JavaScript : Type where
   JS : JavaScript
 
-data Event : Type where
-  Complete : Event
-  Error : Event
-  Success : Event
-
-instance Show Event where
-  show Complete = "complete"
-  show Error = "error"
-  show Success = "success"
-
--- GENERAL JS
-
 infixr 7 ~>
 (~>) : FTy -> FTy -> FTy
 (~>) a b = FFunction a b
@@ -88,6 +76,16 @@ region (AWS JS j0) j1 =
   mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j0 j1
 
 -- AWS REQUEST
+
+data Event : Type where
+  Complete : Event
+  Error : Event
+  Success : Event
+
+instance Show Event where
+  show Complete = "complete"
+  show Error = "error"
+  show Success = "success"
 
 on : Event -> (Ptr -> IO ()) -> Ptr -> IO (Ptr)
 on e f j =
@@ -136,7 +134,7 @@ rs2ReservationIds j = rsData j >>= reservations >>= jsMap reservationId
 
 rs2InstanceIds : Ptr -> IO (Ptr)
 rs2InstanceIds j =
-  rsData j >>= reservations >>= jsMap instances >>= jsMap (jsMap instanceId)
+  rsData j >>= reservations >>= jsMap instances >>= jsMap (jsMap instanceId) -- TODO result needs flattening
 
 -- LOGGING
 
@@ -150,16 +148,19 @@ logData : Ptr -> IO ()
 logData j = rsData j >>= log
 
 logEachBucketName : Ptr -> IO ()
-logEachBucketName j = do putStrLn "BUCKET NAMES:"
-                         rs2BucketNames j >>= forEach log
+logEachBucketName j = do
+  putStrLn "BUCKET NAMES:"
+  rs2BucketNames j >>= forEach log
 
 logEachReservationId : Ptr -> IO ()
-logEachReservationId j = do putStrLn "RESERVATIONS:"
-                            rs2ReservationIds j >>= forEach log
+logEachReservationId j = do
+  putStrLn "RESERVATIONS:"
+  rs2ReservationIds j >>= forEach log
 
 logEachInstance : Ptr -> IO ()
-logEachInstance j = do putStrLn "INSTANCES:"
-                       rs2InstanceIds j >>= forEach log
+logEachInstance j = do
+  putStrLn "INSTANCES:"
+  rs2InstanceIds j >>= forEach log
 
 -- INSTANCES
 
@@ -203,3 +204,13 @@ main = do
     on Success logEachBucketName >>=
     on Error logErr >>=
     send
+
+-- TODO Look into generating the AWS api support code (ffi wrapper &
+-- records) from the aws-sdk json api schema.
+
+-- TODO We need better 1st class type/records here for every request
+-- response not passing around endless JS pointers.
+
+-- TODO We need a class/instance & a way to marshall to from
+-- wrapper/opaque for every request/repsonse/record type. We need the
+-- JS Ptr but we want to deal with real types.  (TypeProvider?)
