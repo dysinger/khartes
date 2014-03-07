@@ -215,6 +215,8 @@ main = do
     on Error logErr >>=
     send
 
+-- TODO Marshall instances? for Region & things
+
 -- TODO Look into generating the AWS api support code (ffi wrapper &
 -- records) from the aws-sdk json api schema.
 
