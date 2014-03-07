@@ -18,8 +18,6 @@ permissions and limitations under the License.
 
 -}
 
--- DATA
-
 data AmazonWebServices : a -> b -> Type where
   AWS : a -> b -> AmazonWebServices a b
 
@@ -37,13 +35,6 @@ data Region : Type where
   UsWest1 : Region
   UsWest2 : Region
 
-instance Show Region where
-  show UsEast1 = "us-east-1"
-  show UsWest1 = "us-west-1"
-  show UsWest2 = "us-west-2"
-
--- CLASSES
-
 class AmazonWebServicesAPI a b where
   aws : a -> IO (AmazonWebServices a b)
 
@@ -60,7 +51,14 @@ class SimpleStorageServiceAPI a b where
   s3 : AmazonWebServices a b -> IO (SimpleStorageService a b)
   listBuckets : SimpleStorageService a b -> IO b
 
--- JAVASCRIPT
+instance Show Region where
+  show UsEast1 = "us-east-1"
+  show UsWest1 = "us-west-1"
+  show UsWest2 = "us-west-2"
+
+----------------
+-- JAVASCRIPT --
+----------------
 
 data JavaScript : Type where
   JS : JavaScript
@@ -79,13 +77,9 @@ forEach j0 j1 =
   mkForeign (FFun ("%0.forEach(%1)")
              [FPtr, FAny Ptr ~> FAny (IO ())] FUnit) j1 j0
 
--- AWS CONFIG
-
 region : AmazonWebServices JavaScript Ptr -> Region -> IO ()
 region (AWS JS j0) j1 =
   mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j0 (show j1)
-
--- AWS REQUEST
 
 data Event : Type where
   Complete : Event
@@ -108,15 +102,11 @@ on e f j =
 send : Ptr -> IO ()
 send j = mkForeign (FFun ("%0.send()") [FPtr] FUnit) j
 
--- AWS RESPONSE
-
 rsErr : Ptr -> IO (Ptr)
 rsErr j = mkForeign (FFun ("%0.error") [FPtr] FPtr) j
 
 rsData : Ptr -> IO (Ptr)
 rsData j = mkForeign (FFun ("%0.data") [FPtr] FPtr) j
-
--- ATTRIBUTES
 
 name : Ptr -> IO (Ptr)
 name j = mkForeign (FFun ("%0.Name") [FPtr] FPtr) j
@@ -146,8 +136,6 @@ rs2InstanceIds : Ptr -> IO (Ptr)
 rs2InstanceIds j =
   rsData j >>= reservations >>= jsMap instances >>= jsMap (jsMap instanceId) -- TODO result needs flattening
 
--- LOGGING
-
 log : Ptr -> IO ()
 log j = mkForeign (FFun ("console.log(%0)") [FPtr] FUnit) j
 
@@ -171,8 +159,6 @@ logEachInstance : Ptr -> IO ()
 logEachInstance j = do
   putStrLn "INSTANCES:"
   rs2InstanceIds j >>= forEach log
-
--- INSTANCES
 
 instance AmazonWebServicesAPI JavaScript Ptr where
   aws JS = mkForeign (FFun "require('aws-sdk')" [] FPtr) >>=
@@ -198,7 +184,9 @@ instance SimpleStorageServiceAPI JavaScript Ptr where
   listBuckets (S3 JS j) =
     mkForeign (FFun "%0.listBuckets()" [FPtr] FPtr) j
 
--- MAIN (DEMO)
+----------
+-- DEMO --
+----------
 
 main : IO ()
 main = do
