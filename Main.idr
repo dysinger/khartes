@@ -116,17 +116,11 @@ name j = mkForeign (FFun ("%0.Name") [FPtr] FPtr) j
 buckets : Ptr -> IO (Ptr)
 buckets j = mkForeign (FFun ("%0.Buckets") [FPtr] FPtr) j
 
-bucketNames : Ptr -> IO (Ptr)
-bucketNames j = rsData j >>= buckets >>= jsMap name
-
 reservationId : Ptr -> IO (Ptr)
 reservationId j = mkForeign (FFun ("%0.ReservationId") [FPtr] FPtr) j
 
 reservations : Ptr -> IO (Ptr)
 reservations j = mkForeign (FFun ("%0.Reservations") [FPtr] FPtr) j
-
-reservationIds : Ptr -> IO (Ptr)
-reservationIds j = rsData j >>= reservations >>= jsMap reservationId
 
 instances : Ptr -> IO (Ptr)
 instances j = mkForeign (FFun ("%0.Instances") [FPtr] FPtr) j
@@ -134,8 +128,14 @@ instances j = mkForeign (FFun ("%0.Instances") [FPtr] FPtr) j
 instanceId : Ptr -> IO (Ptr)
 instanceId j = mkForeign (FFun ("%0.InstanceId") [FPtr] FPtr) j
 
-instanceIds : Ptr -> IO (Ptr)
-instanceIds j =
+rs2BucketNames : Ptr -> IO (Ptr)
+rs2BucketNames j = rsData j >>= buckets >>= jsMap name
+
+rs2ReservationIds : Ptr -> IO (Ptr)
+rs2ReservationIds j = rsData j >>= reservations >>= jsMap reservationId
+
+rs2InstanceIds : Ptr -> IO (Ptr)
+rs2InstanceIds j =
   rsData j >>= reservations >>= jsMap instances >>= jsMap (jsMap instanceId)
 
 -- LOGGING
@@ -151,15 +151,15 @@ logData j = rsData j >>= log
 
 logEachBucketName : Ptr -> IO ()
 logEachBucketName j = do putStrLn "BUCKET NAMES:"
-                         bucketNames j >>= forEach log
+                         rs2BucketNames j >>= forEach log
 
 logEachReservationId : Ptr -> IO ()
 logEachReservationId j = do putStrLn "RESERVATIONS:"
-                            reservationIds j >>= forEach log
+                            rs2ReservationIds j >>= forEach log
 
 logEachInstance : Ptr -> IO ()
 logEachInstance j = do putStrLn "INSTANCES:"
-                       instanceIds j >>= forEach log
+                       rs2InstanceIds j >>= forEach log
 
 -- INSTANCES
 
