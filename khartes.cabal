@@ -8,7 +8,6 @@ author:              Tim Dysinger
 maintainer:          tim@dysinger.net
 category:            Network
 build-type:          Simple
-default-language:    Haskell2010
 
 build-depends:       base
                    , haste-compiler
