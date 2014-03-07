@@ -14,10 +14,10 @@ node_modules/bucker:
 	@cabal sandbox init
 
 .cabal-sandbox/bin/idris: | .cabal-sandbox
-	@cabal install idris
+	@cabal install
 
 .cabal-sandbox/bin/hastec: | .cabal-sandbox
-	@cabal install haste-complier
+	@cabal install
 
 khartes-idris: | .cabal-sandbox/bin/idris node_modules/aws-sdk node_modules/bucker
 	@.cabal-sandbox/bin/idris --codegen node -o khartes-idris Main.idr
