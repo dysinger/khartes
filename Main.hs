@@ -20,7 +20,6 @@ permissions and limitations under the License.
 
 -}
 
-import           Control.Monad.IO.Class
 import           Haste
 import           Haste.Foreign
 
@@ -33,16 +32,16 @@ data ElasticComputeCloud a b where
 data SimpleStorageService a b where
   S3 :: a -> b -> SimpleStorageService a b
 
-class AmazonWebServicesAPI a b where
-  aws :: MonadIO m => a -> m (AmazonWebServices a b)
+class Monad m => AmazonWebServicesAPI a b m where
+  aws :: a -> m (AmazonWebServices a b)
 
-class ElasticComputeCloudAPI a b where
-  ec2 :: MonadIO m => AmazonWebServices a b -> m (ElasticComputeCloud a b)
-  describeInstances :: MonadIO m => ElasticComputeCloud a b -> m ()
+class Monad m => ElasticComputeCloudAPI a b m where
+  ec2 :: AmazonWebServices a b -> m (ElasticComputeCloud a b)
+  describeInstances :: ElasticComputeCloud a b -> m ()
 
-class SimpleStorageServiceAPI a b where
-  s3 :: MonadIO m => AmazonWebServices a b -> m (SimpleStorageService a b)
-  listBuckets :: MonadIO m => SimpleStorageService a b -> m ()
+class Monad m => SimpleStorageServiceAPI a b m where
+  s3 :: AmazonWebServices a b -> m (SimpleStorageService a b)
+  listBuckets :: SimpleStorageService a b -> m ()
 
 ----------------
 -- JAVASCRIPT --
@@ -53,23 +52,31 @@ data JavaScript where
 
 type Ptr = Unpacked
 
-instance AmazonWebServicesAPI JavaScript Ptr where
-  aws JS = liftIO $ ffi "(function(){return require('aws-sdk');});" >>=
-           return . AWS JS . fromOpaque
+js :: String -> IO Ptr
+js f = ffi f >>= return . fromOpaque
 
-instance ElasticComputeCloudAPI JavaScript Ptr where
-  ec2 (AWS JS j) =
-    liftIO $ ffi "(function(x){return new x.EC2();});" (toOpaque j) >>=
-    return . EC2 JS . fromOpaque
-  describeInstances (EC2 JS j) =
-    liftIO $ ffi "(function(x){x.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque j
+js1_ :: String -> Ptr -> IO ()
+js1_ f = ffi f . toOpaque
 
-instance SimpleStorageServiceAPI JavaScript Ptr where
-  s3 (AWS JS j) =
-    liftIO $ ffi "(function(x){return new x.S3();});" (toOpaque j) >>=
-    return . S3 JS . fromOpaque
-  listBuckets (S3 JS j) =
-    liftIO $ ffi "(function(x){x.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque j
+js1 :: String -> Ptr -> IO Ptr
+js1 f j = ffi f (toOpaque j) >>= return . fromOpaque
+
+js2_ :: String -> Ptr -> Ptr -> IO ()
+js2_ f j0 j1 = ffi f (toOpaque j0) (toOpaque j1)
+
+js2 :: String -> Ptr -> Ptr -> IO Ptr
+js2 f j0 j1 = ffi f (toOpaque j0) (toOpaque j1) >>= return . fromOpaque
+
+instance AmazonWebServicesAPI JavaScript Ptr IO where
+  aws JS = js "(function(){return require('aws-sdk');});" >>= return . AWS JS
+
+instance ElasticComputeCloudAPI JavaScript Ptr IO where
+  ec2 (AWS JS j) = js1 "(function(x){return new x.EC2();});" j >>= return . EC2 JS
+  describeInstances (EC2 JS j) = js1_ "(function(x){x.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" j
+
+instance SimpleStorageServiceAPI JavaScript Ptr IO where
+  s3 (AWS JS j) = js1 "(function(x){return new x.S3();});" j >>= return . S3 JS
+  listBuckets (S3 JS j) = js1_ "(function(x){x.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" j
 
 ----------
 -- DEMO --
