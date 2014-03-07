@@ -192,18 +192,16 @@ main : IO ()
 main = do
   amz <- aws JS
   region amz UsEast1
-  ec2 amz >>=
-    describeInstances >>=
-    on Success logEachInstance >>=
-    on Error logErr >>=
+  ec2 amz                        >>=
+    describeInstances            >>=
+    on Success logEachInstance   >>=
+    on Error logErr              >>=
     send
-  s3 amz >>=
-    listBuckets >>=
+  s3 amz                         >>=
+    listBuckets                  >>=
     on Success logEachBucketName >>=
-    on Error logErr >>=
+    on Error logErr              >>=
     send
-
--- TODO Marshall instances? for Region & things
 
 -- TODO Look into generating the AWS api support code (ffi wrapper &
 -- records) from the aws-sdk json api schema.

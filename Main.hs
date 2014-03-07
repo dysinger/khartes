@@ -1,5 +1,6 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 {-
 
@@ -23,8 +24,6 @@ import           Control.Monad.IO.Class
 import           Haste
 import           Haste.Foreign
 
--- Data
-
 data AmazonWebServices a b where
   AWS :: a -> b -> AmazonWebServices a b
 
@@ -33,8 +32,6 @@ data ElasticComputeCloud a b where
 
 data SimpleStorageService a b where
   S3 :: a -> b -> SimpleStorageService a b
-
--- Classes
 
 class AmazonWebServicesAPI a b where
   aws :: MonadIO m => a -> m (AmazonWebServices a b)
@@ -47,36 +44,41 @@ class SimpleStorageServiceAPI a b where
   s3 :: MonadIO m => AmazonWebServices a b -> m (SimpleStorageService a b)
   listBuckets :: MonadIO m => SimpleStorageService a b -> m ()
 
--- JavaScript
+----------------
+-- JAVASCRIPT --
+----------------
 
 data JavaScript where
   JS :: JavaScript
 
-instance AmazonWebServicesAPI JavaScript Unpacked where
+type Ptr = Unpacked
+
+instance AmazonWebServicesAPI JavaScript Ptr where
   aws JS = liftIO $ ffi "(function(){return require('aws-sdk');});" >>=
            return . AWS JS . fromOpaque
 
-instance ElasticComputeCloudAPI JavaScript Unpacked where
+instance ElasticComputeCloudAPI JavaScript Ptr where
   ec2 (AWS JS j) =
     liftIO $ ffi "(function(x){return new x.EC2();});" (toOpaque j) >>=
     return . EC2 JS . fromOpaque
   describeInstances (EC2 JS j) =
     liftIO $ ffi "(function(x){x.describeInstances().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque j
 
-instance SimpleStorageServiceAPI JavaScript Unpacked where
+instance SimpleStorageServiceAPI JavaScript Ptr where
   s3 (AWS JS j) =
     liftIO $ ffi "(function(x){return new x.S3();});" (toOpaque j) >>=
     return . S3 JS . fromOpaque
   listBuckets (S3 JS j) =
     liftIO $ ffi "(function(x){x.listBuckets().on('success',function(r){console.log(r.data);}).on('error',function(r){console.log('ERR',r.error);}).send();});" $ toOpaque j
 
--- Main
+----------
+-- DEMO --
+----------
 
 main :: IO ()
 main = do
-  amz <- aws JS :: IO (AmazonWebServices JavaScript Unpacked)
-  amzEc2 <- ec2 amz :: IO (ElasticComputeCloud JavaScript Unpacked)
+  amz    <- aws JS  :: IO (AmazonWebServices JavaScript Ptr)
+  amzEc2 <- ec2 amz :: IO (ElasticComputeCloud JavaScript Ptr)
+  amzS3  <- s3 amz  :: IO (SimpleStorageService JavaScript Ptr)
   describeInstances amzEc2
-  amzS3 <- s3 amz :: IO (SimpleStorageService JavaScript Unpacked)
   listBuckets amzS3
-  return ()
