@@ -1,0 +1,16 @@
+name:                khartes
+version:             0.1.0.0
+synopsis:            AWS-SDK JavaScript API W/ HASTE-COMPILER & IDRIS
+homepage:            http://github.com/dysinger/khartes
+license:             Apache-2.0
+license-file:        LICENSE
+author:              Tim Dysinger
+maintainer:          tim@dysinger.net
+category:            Network
+build-type:          Simple
+default-language:    Haskell2010
+
+build-depends:       base
+                   , haste-compiler
+                   , idris
+                   , purescript
