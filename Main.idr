@@ -32,6 +32,16 @@ data SimpleDataBase : a -> b -> Type where
 data SimpleStorageService : a -> b -> Type where
   S3 : a -> b -> SimpleStorageService a b
 
+data Region : Type where
+  UsEast1 : Region
+  UsWest1 : Region
+  UsWest2 : Region
+
+instance Show Region where
+  show UsEast1 = "us-east-1"
+  show UsWest1 = "us-west-1"
+  show UsWest2 = "us-west-2"
+
 -- CLASSES
 
 class AmazonWebServicesAPI a b where
@@ -71,9 +81,9 @@ forEach j0 j1 =
 
 -- AWS CONFIG
 
-region : String -> AmazonWebServices JavaScript Ptr -> IO ()
-region j0 (AWS JS j1) =
-  mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j1 j0
+region : AmazonWebServices JavaScript Ptr -> Region -> IO ()
+region (AWS JS j0) j1 =
+  mkForeign (FFun ("%0.config.update({region: %1})") [FPtr, FString] FUnit) j0 (show j1)
 
 -- AWS REQUEST
 
@@ -193,7 +203,7 @@ instance SimpleStorageServiceAPI JavaScript Ptr where
 main : IO ()
 main = do
   amz <- aws JS
-  region "us-east-1" amz
+  region amz UsEast1
   ec2 amz >>=
     describeInstances >>=
     on Success logEachInstance >>=
