@@ -53,19 +53,20 @@ data JavaScript where
 type Ptr = Unpacked
 
 js :: String -> IO Ptr
-js f = ffi f >>= return . fromOpaque
+js f = ffi (toJSString f) >>= return . fromOpaque
 
 js1_ :: String -> Ptr -> IO ()
-js1_ f = ffi f . toOpaque
+js1_ f = ffi (toJSString f) . toOpaque
 
 js1 :: String -> Ptr -> IO Ptr
-js1 f j = ffi f (toOpaque j) >>= return . fromOpaque
+js1 f j = ffi (toJSString f) (toOpaque j) >>= return . fromOpaque
 
 js2_ :: String -> Ptr -> Ptr -> IO ()
-js2_ f j0 j1 = ffi f (toOpaque j0) (toOpaque j1)
+js2_ f j0 j1 = ffi (toJSString f) (toOpaque j0) (toOpaque j1)
 
 js2 :: String -> Ptr -> Ptr -> IO Ptr
-js2 f j0 j1 = ffi f (toOpaque j0) (toOpaque j1) >>= return . fromOpaque
+js2 f j0 j1 = ffi (toJSString f) (toOpaque j0) (toOpaque j1) >>=
+              return . fromOpaque
 
 instance AmazonWebServicesAPI JavaScript Ptr IO where
   aws JS = js "(function(){return require('aws-sdk');});" >>= return . AWS JS
