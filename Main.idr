@@ -202,13 +202,3 @@ main = do
     on Success logEachBucketName >>=
     on Error logErr              >>=
     send
-
--- TODO Look into generating the AWS api support code (ffi wrapper &
--- records) from the aws-sdk json api schema.
-
--- TODO We need better 1st class type/records here for every request
--- response not passing around endless JS pointers.
-
--- TODO We need a class/instance & a way to marshall to from
--- wrapper/opaque for every request/repsonse/record type. We need the
--- JS Ptr but we want to deal with real types.  (TypeProvider?)
