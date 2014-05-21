@@ -12,4 +12,3 @@ build-type:          Simple
 build-depends:       base
                    , haste-compiler
                    , idris
-                   , purescript
