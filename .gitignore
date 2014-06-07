@@ -1,9 +1,14 @@
 *.hi
 *.ibc
-*.js
 *.jsmod
 *.o
 /*cabal*sandbox*
+/.psci*
+/bower_components/
 /dist
-/khartes*
+/khartes-haste
+/khartes-idris
+/lib/
 /node_modules
+/output/
+/tmp/
