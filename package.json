@@ -1,0 +1,15 @@
+{
+  "name": "khartes",
+  "private": true,
+  "dependencies": {
+    "aws-sdk"    : "*",
+    "underscore" : "*"
+  },
+  "devDependencies": {
+    "grunt"                      : "*",
+    "grunt-bower-install-simple" : "*",
+    "grunt-contrib-clean"        : "*",
+    "grunt-execute"              : "*",
+    "grunt-purescript"           : "*"
+  }
+}

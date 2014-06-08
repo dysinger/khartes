@@ -1,0 +1,22 @@
+{
+  "name": "khartes",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "bower_components",
+    "externs",
+    "js",
+    "node_modules",
+    "tests",
+    "tmp"
+  ],
+  "dependencies": {
+    "purescript-arrays"               : "*",
+    "purescript-foldable-traversable" : "*",
+    "purescript-maybe"                : "*"
+  },
+  "devDependencies": {
+    "purescript-math"                 : "*",
+    "purescript-quickcheck"           : "*"
+  }
+}
